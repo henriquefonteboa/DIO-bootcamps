@@ -1,0 +1,11 @@
+version: '3.7'
+
+services:
+  app:
+    image: helloworldphp
+    build:
+      dockerfile: ./app/Dockerfile
+      context: ./
+    container_name: helloworldphp
+    ports:
+      - 8085:80
