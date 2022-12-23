@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysq-data-app
+  labels:
+    type: mysq-data-app
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 200Mi
+  accessModes:
+    - ReadWriteOnce 
+  hostPath:
+    path: /mysqldb/
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysq-data-app
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - image: mysql:5.7
+        name: mysql
+        args:
+        - "--ignore-db-dir=lost+found"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysecret 
+                key: MYSQL_ROOT_PASSWORD
+          - name: MYSQL_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mysecret
+                key: MYSQL_DATABASE
+        volumeMounts:
+        - name: mysq-data-app
+          mountPath: /var/lib/mysql
+        - name: mysql-initdb
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: mysq-data-app
+        persistentVolumeClaim:
+          claimName: mysq-data-app
+      - name: mysql-initdb
+        configMap:
+          name: mysql-initdb-config
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-initdb-config
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS meubanco;
+    USE meubanco;
+    CREATE TABLE mensagens (id int, nome varchar(100), email varchar(100), comentario varchar(150));
+
