@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysq-data
+  labels:
+    type: mysq-data
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 200Mi
+  accessModes:
+    - ReadWriteOnce 
+  hostPath:
+    path: /mysqlbanco/
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysq-data
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - image: henriquefonteboa/projeto-database:1.0
+        name: mysql
+        args:
+        - "--ignore-db-dir=lost+found"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysq-data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysq-data
+        persistentVolumeClaim:
+          claimName: mysq-data
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php
+  labels:
+    app: php
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: php
+  template:
+    metadata:
+      labels:
+        app: php
+    spec:
+      containers:
+      - name: php
+        image: henriquefonteboa/projeto-backend:1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80

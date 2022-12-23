@@ -1,0 +1,8 @@
+FROM mysql:5.7
+
+ENV MYSQL_DATABASE=mysqlbanco \
+    MYSQL_ROOT_PASSWORD=Senha123
+
+COPY ./init.sql /docker-entrypoint-initdb.d/
+
+EXPOSE 3306
